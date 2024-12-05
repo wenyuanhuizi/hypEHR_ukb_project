@@ -1,18 +1,16 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.preprocessing import StandardScaler
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, roc_auc_score, average_precision_score, f1_score, make_scorer
+from sklearn.svm import SVC
+from sklearn.metrics import accuracy_score, roc_auc_score, average_precision_score, f1_score
 from sklearn.feature_extraction.text import CountVectorizer
 from imblearn.over_sampling import SMOTE
-import matplotlib.pyplot as plt
-import seaborn as sns
 
 print("Libraries imported successfully")
 
 # Step 1: Load the data
-labels = pd.read_csv('/Users/wenyuanhuizi/Desktop/ukb processed/edge-labels-ukb.txt', header=None, names=['label'])
-with open('/Users/wenyuanhuizi/Desktop/ukb processed/hyperedges-ukb.txt', 'r') as f:
+labels = pd.read_csv('../data/edge-labels-ukb.txt', header=None, names=['label'])
+with open('../data/hyperedges-ukb.txt', 'r') as f:
     hyperedges = f.readlines()
 
 # Step 2: Create the feature matrix
@@ -29,11 +27,6 @@ data['label'] = labels['label']
 print("Label distribution:")
 print(data['label'].value_counts())
 
-# Plot data distribution
-sns.countplot(x='label', data=data)
-plt.title('Label Distribution')
-plt.show()
-
 # Step 4: Train-test split
 X = data.drop(columns=['label'])
 y = data['label']
@@ -48,15 +41,14 @@ scaler = StandardScaler()
 X_train_resampled = scaler.fit_transform(X_train_resampled)
 X_test = scaler.transform(X_test)
 
-# Step 6: Train a Random Forest model with GridSearchCV
+# Step 6: Train an SVM model with GridSearchCV
 param_grid = {
-    'n_estimators': [100, 200, 300],
-    'max_depth': [10, 20, 30],
-    'min_samples_split': [2, 5, 10],
-    'min_samples_leaf': [1, 2, 4]
+    'C': [0.1, 1, 10, 100],
+    'gamma': ['scale', 'auto'],
+    'kernel': ['linear', 'rbf']
 }
 
-grid_search = GridSearchCV(RandomForestClassifier(class_weight='balanced', random_state=42), param_grid, 
+grid_search = GridSearchCV(SVC(probability=True, class_weight='balanced'), param_grid, 
                            scoring='f1_macro', cv=5, verbose=1, n_jobs=-1)
 
 grid_search.fit(X_train_resampled, y_train_resampled)

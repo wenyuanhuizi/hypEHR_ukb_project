@@ -2,17 +2,15 @@ import pandas as pd
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, roc_auc_score, average_precision_score, f1_score, make_scorer
+from sklearn.metrics import accuracy_score, roc_auc_score, average_precision_score, f1_score
 from sklearn.feature_extraction.text import CountVectorizer
 from imblearn.over_sampling import SMOTE
-import matplotlib.pyplot as plt
-import seaborn as sns
 
 print("Libraries imported successfully")
 
 # Step 1: Load the data
-labels = pd.read_csv('/Users/wenyuanhuizi/Desktop/Carl Yang Summer/ukb processed/edge-labels-ukb.txt', header=None, names=['label'])
-with open('/Users/wenyuanhuizi/Desktop/Carl Yang Summer/ukb processed/hyperedges-ukb.txt', 'r') as f:
+labels = pd.read_csv('../data/edge-labels-ukb.txt', header=None, names=['label'])
+with open('../data/hyperedges-ukb.txt', 'r') as f:
     hyperedges = f.readlines()
 
 # Step 2: Create the feature matrix
@@ -34,10 +32,6 @@ data['label'] = labels['label']
 print("Label distribution:")
 print(data['label'].value_counts())
 
-# Plot data distribution
-sns.countplot(x='label', data=data)
-plt.title('Label Distribution')
-plt.show()
 
 # Step 4: Train-test split
 X = data.drop(columns=['label'])
