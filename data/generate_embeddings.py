@@ -47,7 +47,7 @@ def save_embeddings_to_txt(model, file_path):
         for node, embedding in zip(vocab, embeddings):
             f.write(f"{node} {' '.join(map(str, embedding))}\n")
 
-os.chdir('/local/scratch/ywen37/ML_final/hypEHR_ukb_project/data')
+os.chdir('../data')   
 seed_everything(seed=0)
 file_path = 'hyperedges-ukb.txt'  
 output_file_path = 'node-embeddings-ukb'  
