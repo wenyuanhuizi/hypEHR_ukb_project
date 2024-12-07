@@ -26,7 +26,7 @@ import random
 
 def parse_method(args, data):
     model = None
-    if args.dname == 'cradle':
+    if args.dname == 'ukb':
         model = SetGNN(args, data)
     return model
 
@@ -149,7 +149,7 @@ def get_subset_ranking(edge_weight, edge_index, num_hyperedges, args):
             f_del.write(",".join(delete))
             f_del.write('\n')
 
-def eval_cradle(y_true, y_pred, epoch, method, dname, args, mode='dev', threshold=0.5):
+def eval_ukb(y_true, y_pred, epoch, method, dname, args, mode='dev', threshold=0.5):
     y_true = y_true.detach().cpu().numpy()
     y_pred = y_pred.detach().cpu().numpy()
 
@@ -167,7 +167,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--train_prop', type=float, default=0.7)
     parser.add_argument('--valid_prop', type=float, default=0.1)
-    parser.add_argument('--dname', default='cradle')
+    parser.add_argument('--dname', default='ukb')
     parser.add_argument('--method', default='AllSetTransformer')
     parser.add_argument('--epochs', default=30, type=int)
     parser.add_argument('--cuda', default='0', type=str)
@@ -193,8 +193,8 @@ if __name__ == '__main__':
     # NormLayer for MLP. ['bn','ln','None']
     parser.add_argument('--normalization', default='ln')
     parser.add_argument('--num_features', default=0, type=int)  # Placeholder
-    parser.add_argument('--num_labels', default=25, type=int)  # set the default for now
-    parser.add_argument('--num_nodes', default=7423, type=int)  # 7423 for mimic and 12725 for cradle
+    parser.add_argument('--num_labels', default=2, type=int)  # set the default for now
+    parser.add_argument('--num_nodes', default=3957, type=int)  
     # 'all' means all samples have labels, otherwise it indicates the first [num_labeled_data] rows that have the labels
     parser.add_argument('--num_labeled_data', default='all', type=str)
     parser.add_argument('--feature_dim', default=64, type=int)  # feature dim of learnable node feat
@@ -224,17 +224,17 @@ if __name__ == '__main__':
     
     seed_everything(args.rand_seed) 
 
-    existing_dataset = ['cradle']
+    existing_dataset = ['ukb']
 
-    synthetic_list = ['cradle']
+    synthetic_list = ['ukb']
 
     dname = args.dname
-    p2raw = '../data/raw_data/'
+    p2raw = '../data'
     dataset = dataset_Hypergraph(name=dname, root='../data/pyg_data/hypergraph_dataset/',
                                  p2raw=p2raw, num_nodes=args.num_nodes)
     data = dataset.data
     args.num_features = dataset.num_features
-    if args.dname in ['cradle']:
+    if args.dname in ['ukb']:
         # Shift the y label to start with 0
         data.y = data.y - data.y.min()
     if not hasattr(data, 'n_x'):
@@ -277,7 +277,7 @@ if __name__ == '__main__':
     model_optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
     view_optimizer = torch.optim.Adam(view_learner.parameters(), lr=args.view_lr, weight_decay=args.view_wd)
 
-    with open(f'../data/raw_data/{args.dname}/hyperedges-{args.dname}.txt', 'r') as f:
+    with open(f'../data/hyperedges-{args.dname}.txt', 'r') as f:
         total_edges = []
         maxlen = 0
         for lines in f:
@@ -418,7 +418,7 @@ if __name__ == '__main__':
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 1)
                 model_optimizer.step()
 
-                eval_function = eval_cradle
+                eval_function = eval_ukb
                 valid_acc_g, valid_auc_g, valid_aupr_g, valid_f1_macro_g, \
                 test_acc_g, test_auc_g, test_aupr_g, test_f1_macro_g, \
                 valid_acc_gf, valid_auc_gf, valid_aupr_gf, valid_f1_macro_gf, \
@@ -432,8 +432,8 @@ if __name__ == '__main__':
                 fname_test = ''
                 vanilla = ""
                 if args.vanilla: vanilla = "_vanilla"
-                fname_dev = f'outputs/cradle_dev_{args.method}{vanilla}.txt'
-                fname_test = f'outputs/cradle_test_{args.method}{vanilla}.txt'
+                fname_dev = f'outputs/ukb_dev_{args.method}{vanilla}.txt'
+                fname_test = f'outputs/ukb_test_{args.method}{vanilla}.txt'
          
             # dev set
             with open(fname_dev, 'a+', encoding='utf-8') as f:

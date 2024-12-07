@@ -15,7 +15,7 @@ from torch_sparse import coalesce
 
 def load_dataset(path='../data', 
                  node_feature_path="../data/node-embeddings-ukb",
-                 num_node=7423):
+                 num_node=3957):
 
     print('Loading ukb hypergraph dataset')
 
@@ -38,9 +38,11 @@ def load_dataset(path='../data',
 
     print(f'number of nodes:{num_nodes}, feature dimension: {features.shape[1]}')
 
+    # prepare features and labels
     features = torch.FloatTensor(features)
     labels = torch.FloatTensor(labels)
-
+    
+    # build hyperedges 
     p2hyperedge_list = osp.join(path, 'hyperedges-ukb.txt')
     node_list = []
     he_list = []
@@ -58,14 +60,20 @@ def load_dataset(path='../data',
             he_id += 1
 
     # Shift node_idx to start with 0
+    # ensures compatibility with PyTorch tensor indices
     node_idx_min = np.min(node_list)
     node_list = [x - node_idx_min for x in node_list]
 
+    # Constructs a bipartite edge index:
+    # Each edge connects a node to a hyperedge 
+    # The edge index is represented as a list of two lists: 
+    # The first list contains source nodes, The second list contains target nodes
     edge_index = [node_list + he_list,
                   he_list + node_list]
 
     edge_index = torch.LongTensor(edge_index)
 
+    # *** create data object
     data = Data(x=features,
                 edge_index=edge_index,
                 y=labels)
@@ -114,13 +122,13 @@ def save_data_to_pickle(data, p2root='../data/', file_name=None):
 
 
 class dataset_Hypergraph(InMemoryDataset):
-    def __init__(self, root='../data/pyg_data/hypergraph_dataset/', 
+    def __init__(self, name=None, root='../data/pyg_data/hypergraph_dataset/', 
                  p2raw=None, 
                  transform=None, 
                  pre_transform=None, 
-                 num_nodes=7423):
+                 num_nodes=3957):
         
-        self.name = 'ukb'
+        self.name = name
         
         if (p2raw is not None) and osp.isdir(p2raw):
             self.p2raw = p2raw

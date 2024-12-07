@@ -7,7 +7,7 @@ from itertools import combinations
 from torch_scatter import scatter_add, scatter
 from torch_geometric.nn.conv.gcn_conv import gcn_norm
 
-
+# Extract only vertex-to-edge relationships
 def ExtractV2E(data):
     # Assume edge_index = [V|E;E|V]
     edge_index = data.edge_index
