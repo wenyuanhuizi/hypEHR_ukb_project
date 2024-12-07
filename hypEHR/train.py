@@ -125,9 +125,11 @@ def evaluate(model, data, split_idx, eval_func, epoch, method, dname, args):
 
     model.eval()
 
-    # use original graph (G)
+    # Use original graph (G)
     out_score_g_logits, edge_feat, node_feat, weight_tuple = model(data)
-    out_g = torch.sigmoid(out_score_g_logits)
+
+    # Extract probabilities for the positive class (index 1)
+    out_g = torch.sigmoid(out_score_g_logits[:, 1])
 
     # Ensure consistent dimensions for y_true and y_pred
     valid_idx = split_idx['valid']
@@ -164,7 +166,7 @@ def evaluate(model, data, split_idx, eval_func, epoch, method, dname, args):
 
         # Use factual graph (G')
         out_score_gf_logits, _, _, _ = model(data, edge_weight=aug_edge_weight)
-        out_gf = torch.sigmoid(out_score_gf_logits)
+        out_gf = torch.sigmoid(out_score_gf_logits[:, 1])
 
         valid_y_pred_gf = out_gf[valid_idx]
         test_y_pred_gf = out_gf[test_idx]
@@ -178,7 +180,7 @@ def evaluate(model, data, split_idx, eval_func, epoch, method, dname, args):
 
         # Use counterfactual graph (G-G')
         out_score_gcf_logits, _, _, _ = model(data, edge_weight=1 - aug_edge_weight)
-        out_gcf = torch.sigmoid(out_score_gcf_logits)
+        out_gcf = torch.sigmoid(out_score_gcf_logits[:, 1])
 
         valid_y_pred_gcf = out_gcf[valid_idx]
         test_y_pred_gcf = out_gcf[test_idx]
@@ -199,6 +201,7 @@ def evaluate(model, data, split_idx, eval_func, epoch, method, dname, args):
            test_acc_gf, test_auc_gf, test_aupr_gf, test_f1_macro_gf, \
            valid_acc_gcf, valid_auc_gcf, valid_aupr_gcf, valid_f1_macro_gcf, \
            test_acc_gcf, test_auc_gcf, test_aupr_gcf, test_f1_macro_gcf
+
 
 
 def get_subset_ranking(edge_weight, edge_index, num_hyperedges, args):
