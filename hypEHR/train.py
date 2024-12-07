@@ -412,7 +412,7 @@ if __name__ == '__main__':
                 # factual and counterfactual view loss
                 loss = args.view_alpha * loss_f + (1 - args.view_alpha) * loss_cf
 
-                model_loss = criterion(out[train_idx], data.y[train_idx]) + args.model_lambda * loss
+                model_loss = criterion(out[train_idx-1], data.y[train_idx]) + args.model_lambda * loss
                 model_loss.backward()
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 1)
                 model_optimizer.step()
