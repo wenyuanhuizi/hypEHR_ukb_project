@@ -134,9 +134,9 @@ def evaluate(model, data, split_idx, eval_func, epoch, method, dname, args):
     # Ensure consistent dimensions for y_true and y_pred
     valid_idx = split_idx['valid']
     test_idx = split_idx['test']
-    valid_y_true = data.y[valid_idx]
+    valid_y_true = data.y[valid_idx].view(-1)  # Reshape to 1D
     valid_y_pred = out_g[valid_idx]
-    test_y_true = data.y[test_idx]
+    test_y_true = data.y[test_idx].view(-1)  # Reshape to 1D
     test_y_pred = out_g[test_idx]
 
     assert valid_y_true.shape == valid_y_pred.shape, f"Validation mismatch: {valid_y_true.shape} vs {valid_y_pred.shape}"
