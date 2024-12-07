@@ -48,7 +48,7 @@ class SetGNN(nn.Module):
         if self.All_num_layers == 0:
             self.classifier = MLP(in_channels=args.num_features,
                                   hidden_channels=args.Classifier_hidden,
-                                  out_channels=args.num_labels,
+                                  out_channels=1,
                                   num_layers=args.Classifier_num_layers,
                                   dropout=self.dropout,
                                   Normalization=self.NormLayer,
