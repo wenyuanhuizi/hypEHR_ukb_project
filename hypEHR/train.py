@@ -42,7 +42,85 @@ def seed_everything(seed=0):
     os.environ["PYTHONHASHSEED"] = str(seed)
 
 @torch.no_grad()
+# def evaluate(model, data, split_idx, eval_func, epoch, method, dname, args):
+#     valid_acc_gf = valid_auc_gf = valid_aupr_gf = valid_f1_macro_gf = \
+#     test_acc_gf = test_auc_gf = test_aupr_gf = test_f1_macro_gf = \
+#     valid_acc_gcf = valid_auc_gcf = valid_aupr_gcf = valid_f1_macro_gcf = \
+#     test_acc_gcf = test_auc_gcf = test_aupr_gcf = test_f1_macro_gcf = 0
+
+#     model.eval()
+
+#     # use original graph (G)
+#     out_score_g_logits, edge_feat, node_feat, weight_tuple = model(data)
+#     out_g = torch.sigmoid(out_score_g_logits)
+
+#     valid_acc_g, valid_auc_g, valid_aupr_g, valid_f1_macro_g = eval_func(
+#         data.y[split_idx['valid']], out_g[split_idx['valid']],
+#         epoch, method, dname, args, mode='dev_g', threshold=args.threshold)
+#     test_acc_g, test_auc_g, test_aupr_g, test_f1_macro_g = eval_func(data.y[split_idx['test']],
+#                                                                      out_g[split_idx['test']],
+#                                                                      epoch, method, dname, args,
+#                                                                      mode='test_g',
+#                                                                      threshold=args.threshold)
+
+#     if args.vanilla:
+#         edge_index = weight_tuple[0]
+#         edge_weight = weight_tuple[1].reshape(-1)
+#         num_hyperedges = data.num_hyperedges
+
+#     else:
+#         # get the edge weight
+#         view_learner.eval()
+#         weight_logits = view_learner(data, device)
+
+#         # gumbel softmax
+#         bias = 0.0 + 0.0001  # If bias is 0, we run into problems
+#         eps = (bias - (1 - bias)) * torch.rand(weight_logits.size()) + (1 - bias)
+#         gate_inputs = torch.log(eps) - torch.log(1 - eps)
+#         gate_inputs = gate_inputs.to(device)
+#         gate_inputs = (gate_inputs + weight_logits) / args.temperature
+#         aug_edge_weight = torch.sigmoid(gate_inputs).squeeze()
+
+#         # use factual graph (G')
+#         out_score_gf_logits, _, _, _ = model(data, edge_weight=aug_edge_weight)  # use augmented graph
+#         out_gf = torch.sigmoid(out_score_gf_logits)
+
+#         valid_acc_gf, valid_auc_gf, valid_aupr_gf, valid_f1_macro_gf = eval_func(
+#             data.y[split_idx['valid']],
+#             out_gf[split_idx['valid']],
+#             epoch, method, dname, args, mode='dev_gf', threshold=args.threshold)
+#         test_acc_gf, test_auc_gf, test_aupr_gf, test_f1_macro_gf = eval_func(
+#             data.y[split_idx['test']], out_gf[split_idx['test']],
+#             epoch, method, dname, args, mode='test_gf', threshold=args.threshold)
+
+#         # use counterfactual graph (G-G')
+#         out_score_gcf_logits, _, _, _ = model(data, edge_weight=1 - aug_edge_weight)  # use augmented graph
+#         out_gcf = torch.sigmoid(out_score_gcf_logits)
+
+#         valid_acc_gcf, valid_auc_gcf, valid_aupr_gcf, valid_f1_macro_gcf = eval_func(
+#             data.y[split_idx['valid']],
+#             out_gcf[split_idx['valid']],
+#             epoch, method, dname, args,
+#             mode='dev_gcf', threshold=args.threshold)
+#         test_acc_gcf, test_auc_gcf, test_aupr_gcf, test_f1_macro_gcf = eval_func(
+#             data.y[split_idx['test']], out_gcf[split_idx['test']],
+#             epoch, method, dname, args,
+#             mode='test_gcf', threshold=args.threshold)
+
+#         if epoch == args.epochs - 1:
+#             get_subset_ranking(aug_edge_weight, data.edge_index, data.num_hyperedges, args)
+
+#     return valid_acc_g, valid_auc_g, valid_aupr_g, valid_f1_macro_g, \
+#            test_acc_g, test_auc_g, test_aupr_g, test_f1_macro_g, \
+#            valid_acc_gf, valid_auc_gf, valid_aupr_gf, valid_f1_macro_gf, \
+#            test_acc_gf, test_auc_gf, test_aupr_gf, test_f1_macro_gf, \
+#            valid_acc_gcf, valid_auc_gcf, valid_aupr_gcf, valid_f1_macro_gcf, \
+#            test_acc_gcf, test_auc_gcf, test_aupr_gcf, test_f1_macro_gcf
+
 def evaluate(model, data, split_idx, eval_func, epoch, method, dname, args):
+    # Initialize metrics
+    valid_acc_g = valid_auc_g = valid_aupr_g = valid_f1_macro_g = \
+    test_acc_g = test_auc_g = test_aupr_g = test_f1_macro_g = \
     valid_acc_gf = valid_auc_gf = valid_aupr_gf = valid_f1_macro_gf = \
     test_acc_gf = test_auc_gf = test_aupr_gf = test_f1_macro_gf = \
     valid_acc_gcf = valid_auc_gcf = valid_aupr_gcf = valid_f1_macro_gcf = \
@@ -50,65 +128,68 @@ def evaluate(model, data, split_idx, eval_func, epoch, method, dname, args):
 
     model.eval()
 
-    # use original graph (G)
-    out_score_g_logits, edge_feat, node_feat, weight_tuple = model(data)
-    out_g = torch.sigmoid(out_score_g_logits)
+    def reshape_and_threshold(y_true, y_pred, threshold=0.5):
+        """Utility to reshape and threshold predictions for binary classification."""
+        y_true = y_true.view(-1)  # Flatten ground truth
+        y_pred = y_pred.view(-1)  # Flatten predictions
+        y_pred = (y_pred > threshold).long()  # Apply threshold for binary classification
+        return y_true, y_pred
 
-    valid_acc_g, valid_auc_g, valid_aupr_g, valid_f1_macro_g = eval_func(
-        data.y[split_idx['valid']], out_g[split_idx['valid']],
-        epoch, method, dname, args, mode='dev_g', threshold=args.threshold)
-    test_acc_g, test_auc_g, test_aupr_g, test_f1_macro_g = eval_func(data.y[split_idx['test']],
-                                                                     out_g[split_idx['test']],
-                                                                     epoch, method, dname, args,
-                                                                     mode='test_g',
-                                                                     threshold=args.threshold)
+    with torch.no_grad():
+        # Original graph (G)
+        out_score_g_logits, edge_feat, node_feat, weight_tuple = model(data)
+        out_g = torch.sigmoid(out_score_g_logits)  # Convert logits to probabilities
 
-    if args.vanilla:
-        edge_index = weight_tuple[0]
-        edge_weight = weight_tuple[1].reshape(-1)
-        num_hyperedges = data.num_hyperedges
+        # Validation and test evaluation for the original graph
+        y_valid_true, y_valid_pred = reshape_and_threshold(data.y[split_idx['valid']], out_g[split_idx['valid']])
+        valid_acc_g, valid_auc_g, valid_aupr_g, valid_f1_macro_g = eval_func(
+            y_valid_true, y_valid_pred, epoch, method, dname, args, mode='dev_g', threshold=args.threshold
+        )
 
-    else:
-        # get the edge weight
-        view_learner.eval()
-        weight_logits = view_learner(data, device)
+        y_test_true, y_test_pred = reshape_and_threshold(data.y[split_idx['test']], out_g[split_idx['test']])
+        test_acc_g, test_auc_g, test_aupr_g, test_f1_macro_g = eval_func(
+            y_test_true, y_test_pred, epoch, method, dname, args, mode='test_g', threshold=args.threshold
+        )
 
-        # gumbel softmax
-        bias = 0.0 + 0.0001  # If bias is 0, we run into problems
-        eps = (bias - (1 - bias)) * torch.rand(weight_logits.size()) + (1 - bias)
-        gate_inputs = torch.log(eps) - torch.log(1 - eps)
-        gate_inputs = gate_inputs.to(device)
-        gate_inputs = (gate_inputs + weight_logits) / args.temperature
-        aug_edge_weight = torch.sigmoid(gate_inputs).squeeze()
+        if not args.vanilla:
+            # Get edge weights from view learner
+            view_learner.eval()
+            weight_logits = view_learner(data, device)
 
-        # use factual graph (G')
-        out_score_gf_logits, _, _, _ = model(data, edge_weight=aug_edge_weight)  # use augmented graph
-        out_gf = torch.sigmoid(out_score_gf_logits)
+            # Apply Gumbel softmax for augmentation
+            bias = 0.0001  # Avoid numerical instability
+            eps = (bias - (1 - bias)) * torch.rand(weight_logits.size()) + (1 - bias)
+            gate_inputs = torch.log(eps) - torch.log(1 - eps)
+            gate_inputs = gate_inputs.to(device)
+            gate_inputs = (gate_inputs + weight_logits) / args.temperature
+            aug_edge_weight = torch.sigmoid(gate_inputs).squeeze()
 
-        valid_acc_gf, valid_auc_gf, valid_aupr_gf, valid_f1_macro_gf = eval_func(
-            data.y[split_idx['valid']],
-            out_gf[split_idx['valid']],
-            epoch, method, dname, args, mode='dev_gf', threshold=args.threshold)
-        test_acc_gf, test_auc_gf, test_aupr_gf, test_f1_macro_gf = eval_func(
-            data.y[split_idx['test']], out_gf[split_idx['test']],
-            epoch, method, dname, args, mode='test_gf', threshold=args.threshold)
+            # Factual graph (G')
+            out_score_gf_logits, _, _, _ = model(data, edge_weight=aug_edge_weight)
+            out_gf = torch.sigmoid(out_score_gf_logits)
+            y_valid_true, y_valid_pred = reshape_and_threshold(data.y[split_idx['valid']], out_gf[split_idx['valid']])
+            valid_acc_gf, valid_auc_gf, valid_aupr_gf, valid_f1_macro_gf = eval_func(
+                y_valid_true, y_valid_pred, epoch, method, dname, args, mode='dev_gf', threshold=args.threshold
+            )
+            y_test_true, y_test_pred = reshape_and_threshold(data.y[split_idx['test']], out_gf[split_idx['test']])
+            test_acc_gf, test_auc_gf, test_aupr_gf, test_f1_macro_gf = eval_func(
+                y_test_true, y_test_pred, epoch, method, dname, args, mode='test_gf', threshold=args.threshold
+            )
 
-        # use counterfactual graph (G-G')
-        out_score_gcf_logits, _, _, _ = model(data, edge_weight=1 - aug_edge_weight)  # use augmented graph
-        out_gcf = torch.sigmoid(out_score_gcf_logits)
+            # Counterfactual graph (G-G')
+            out_score_gcf_logits, _, _, _ = model(data, edge_weight=1 - aug_edge_weight)
+            out_gcf = torch.sigmoid(out_score_gcf_logits)
+            y_valid_true, y_valid_pred = reshape_and_threshold(data.y[split_idx['valid']], out_gcf[split_idx['valid']])
+            valid_acc_gcf, valid_auc_gcf, valid_aupr_gcf, valid_f1_macro_gcf = eval_func(
+                y_valid_true, y_valid_pred, epoch, method, dname, args, mode='dev_gcf', threshold=args.threshold
+            )
+            y_test_true, y_test_pred = reshape_and_threshold(data.y[split_idx['test']], out_gcf[split_idx['test']])
+            test_acc_gcf, test_auc_gcf, test_aupr_gcf, test_f1_macro_gcf = eval_func(
+                y_test_true, y_test_pred, epoch, method, dname, args, mode='test_gcf', threshold=args.threshold
+            )
 
-        valid_acc_gcf, valid_auc_gcf, valid_aupr_gcf, valid_f1_macro_gcf = eval_func(
-            data.y[split_idx['valid']],
-            out_gcf[split_idx['valid']],
-            epoch, method, dname, args,
-            mode='dev_gcf', threshold=args.threshold)
-        test_acc_gcf, test_auc_gcf, test_aupr_gcf, test_f1_macro_gcf = eval_func(
-            data.y[split_idx['test']], out_gcf[split_idx['test']],
-            epoch, method, dname, args,
-            mode='test_gcf', threshold=args.threshold)
-
-        if epoch == args.epochs - 1:
-            get_subset_ranking(aug_edge_weight, data.edge_index, data.num_hyperedges, args)
+            if epoch == args.epochs - 1:
+                get_subset_ranking(aug_edge_weight, data.edge_index, data.num_hyperedges, args)
 
     return valid_acc_g, valid_auc_g, valid_aupr_g, valid_f1_macro_g, \
            test_acc_g, test_auc_g, test_aupr_g, test_f1_macro_g, \
@@ -116,6 +197,7 @@ def evaluate(model, data, split_idx, eval_func, epoch, method, dname, args):
            test_acc_gf, test_auc_gf, test_aupr_gf, test_f1_macro_gf, \
            valid_acc_gcf, valid_auc_gcf, valid_aupr_gcf, valid_f1_macro_gcf, \
            test_acc_gcf, test_auc_gcf, test_aupr_gcf, test_f1_macro_gcf
+
 
 def get_subset_ranking(edge_weight, edge_index, num_hyperedges, args):
     edge_index_clone = edge_index.clone().detach().to('cpu').numpy()
