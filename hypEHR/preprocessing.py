@@ -51,8 +51,10 @@ def Add_Self_Loops(data):
             skip_node_lst.append(skip_node.item())
 
     new_edge_idx = edge_index[1].max() + 1
-    new_edges = torch.zeros(
-        (2, num_nodes - len(skip_node_lst)), dtype=edge_index.dtype)
+    # new_edges = torch.zeros(
+    #     (2, num_nodes - len(skip_node_lst)), dtype=edge_index.dtype)
+    num_new_edges = num_nodes - len(skip_node_lst)
+    new_edges = torch.zeros((2, num_new_edges), dtype=edge_index.dtype)
     tmp_count = 0
     for i in range(num_nodes):
         if i not in skip_node_lst:
