@@ -246,8 +246,8 @@ if __name__ == '__main__':
 
     if args.method == 'AllSetTransformer':
         data = ExtractV2E(data)
-        if args.add_self_loop:
-            data = Add_Self_Loops(data)
+        # if args.add_self_loop:
+        #     data = Add_Self_Loops(data)
         data = norm_contruction(data, option=args.normtype)
 
     model = parse_method(args, data)
