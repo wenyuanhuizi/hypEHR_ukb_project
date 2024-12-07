@@ -93,6 +93,9 @@ def Add_Self_Loops(data):
         data.totedges = num_hyperedges
         return data
 
+    # Debug print
+    print(f"num_nodes: {num_nodes}, len(skip_node_lst): {len(skip_node_lst)}, num_new_edges: {num_new_edges}")
+
     new_edges = torch.zeros((2, num_new_edges), dtype=edge_index.dtype)
 
     # Add self-loops for nodes that do not already have them
@@ -101,7 +104,7 @@ def Add_Self_Loops(data):
     for i in range(num_nodes):
         if i not in skip_node_lst:
             if tmp_count >= num_new_edges:
-                raise ValueError("tmp_count exceeds allocated new_edges size!")
+                raise ValueError(f"tmp_count ({tmp_count}) exceeds allocated new_edges size ({num_new_edges})!")
             new_edges[0][tmp_count] = i
             new_edges[1][tmp_count] = new_edge_idx
             new_edge_idx += 1
