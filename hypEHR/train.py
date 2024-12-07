@@ -412,7 +412,15 @@ if __name__ == '__main__':
                 # factual and counterfactual view loss
                 loss = args.view_alpha * loss_f + (1 - args.view_alpha) * loss_cf
 
-                model_loss = criterion(out[train_idx-1], data.y[train_idx]) + args.model_lambda * loss
+                # model_loss = criterion(out[train_idx-1], data.y[train_idx]) + args.model_lambda * loss
+                # Ensure the model outputs a single probability for binary classification
+                out = out.squeeze(-1) if out.shape[-1] == 1 else out[:, 1]  # Handle cases where output has two dimensions
+
+                # Ensure the target tensor matches the shape of the model's output
+                target = data.y.view_as(out)
+
+                # Compute the binary cross-entropy loss
+                model_loss = criterion(out[train_idx], target[train_idx]) + args.model_lambda * loss
                 model_loss.backward()
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 1)
                 model_optimizer.step()
