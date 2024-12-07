@@ -197,7 +197,7 @@ if __name__ == '__main__':
     parser.add_argument('--num_nodes', default=3957, type=int)  
     # 'all' means all samples have labels, otherwise it indicates the first [num_labeled_data] rows that have the labels
     parser.add_argument('--num_labeled_data', default='all', type=str)
-    parser.add_argument('--feature_dim', default=64, type=int)  # feature dim of learnable node feat
+    parser.add_argument('--feature_dim', default=128, type=int)  # feature dim of learnable node feat
     parser.add_argument('--LearnFeat', action='store_true')
     # whether the he contain self node or not
     parser.add_argument('--PMA', action='store_true')
