@@ -28,44 +28,90 @@ def ExtractV2E(data):
     return data
 
 
+# def Add_Self_Loops(data):
+#     # update so we dont jump on some indices
+#     # Assume edge_index = [V;E]. If not, use ExtractV2E()
+#     edge_index = data.edge_index
+#     # num_nodes = data.n_x[0]
+#     num_nodes = data.n_x
+#     # num_hyperedges = data.num_hyperedges[0]
+#     num_hyperedges = data.num_hyperedges
+
+#     # if not ((data.n_x[0] + data.num_hyperedges[0] - 1) == data.edge_index[1].max().item()):
+#     #     print('num_hyperedges does not match! 2')
+#     #     return
+
+#     hyperedge_appear_fre = Counter(edge_index[1].numpy())
+#     # store the nodes that already have self-loops
+#     skip_node_lst = []
+#     for edge in hyperedge_appear_fre:
+#         if hyperedge_appear_fre[edge] == 1:
+#             skip_node = edge_index[0][torch.where(
+#                 edge_index[1] == edge)[0].item()]
+#             skip_node_lst.append(skip_node.item())
+
+#     new_edge_idx = edge_index[1].max() + 1
+#     # new_edges = torch.zeros(
+#     #     (2, num_nodes - len(skip_node_lst)), dtype=edge_index.dtype)
+#     num_new_edges = num_nodes - len(skip_node_lst)
+#     new_edges = torch.zeros((2, num_new_edges), dtype=edge_index.dtype)
+#     tmp_count = 0
+#     for i in range(num_nodes):
+#         if i not in skip_node_lst:
+#             new_edges[0][tmp_count] = i
+#             new_edges[1][tmp_count] = new_edge_idx
+#             new_edge_idx += 1
+#             tmp_count += 1
+
+#     data.totedges = num_hyperedges + num_nodes - len(skip_node_lst)
+#     edge_index = torch.cat((edge_index, new_edges), dim=1)
+#     # Sort along w.r.t. nodes
+#     _, sorted_idx = torch.sort(edge_index[0])
+#     data.edge_index = edge_index[:, sorted_idx].type(torch.LongTensor)
+#     return data
+
 def Add_Self_Loops(data):
-    # update so we dont jump on some indices
-    # Assume edge_index = [V;E]. If not, use ExtractV2E()
+    # Extract relevant data
     edge_index = data.edge_index
-    # num_nodes = data.n_x[0]
     num_nodes = data.n_x
-    # num_hyperedges = data.num_hyperedges[0]
     num_hyperedges = data.num_hyperedges
 
-    # if not ((data.n_x[0] + data.num_hyperedges[0] - 1) == data.edge_index[1].max().item()):
-    #     print('num_hyperedges does not match! 2')
-    #     return
-
+    # Count hyperedge appearances
     hyperedge_appear_fre = Counter(edge_index[1].numpy())
-    # store the nodes that already have self-loops
+
+    # Identify nodes that already have self-loops
     skip_node_lst = []
     for edge in hyperedge_appear_fre:
         if hyperedge_appear_fre[edge] == 1:
-            skip_node = edge_index[0][torch.where(
-                edge_index[1] == edge)[0].item()]
+            skip_node = edge_index[0][torch.where(edge_index[1] == edge)[0].item()]
             skip_node_lst.append(skip_node.item())
 
-    new_edge_idx = edge_index[1].max() + 1
-    # new_edges = torch.zeros(
-    #     (2, num_nodes - len(skip_node_lst)), dtype=edge_index.dtype)
+    # Dynamically allocate size for new_edges
     num_new_edges = num_nodes - len(skip_node_lst)
+    if num_new_edges <= 0:
+        # No self-loops needed
+        data.totedges = num_hyperedges
+        return data
+
     new_edges = torch.zeros((2, num_new_edges), dtype=edge_index.dtype)
+
+    # Add self-loops for nodes that do not already have them
+    new_edge_idx = edge_index[1].max() + 1
     tmp_count = 0
     for i in range(num_nodes):
         if i not in skip_node_lst:
+            if tmp_count >= num_new_edges:
+                raise ValueError("tmp_count exceeds allocated new_edges size!")
             new_edges[0][tmp_count] = i
             new_edges[1][tmp_count] = new_edge_idx
             new_edge_idx += 1
             tmp_count += 1
 
-    data.totedges = num_hyperedges + num_nodes - len(skip_node_lst)
+    # Update the total number of edges
+    data.totedges = num_hyperedges + num_new_edges
+
+    # Concatenate new edges and sort
     edge_index = torch.cat((edge_index, new_edges), dim=1)
-    # Sort along w.r.t. nodes
     _, sorted_idx = torch.sort(edge_index[0])
     data.edge_index = edge_index[:, sorted_idx].type(torch.LongTensor)
     return data
